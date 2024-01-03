@@ -144,6 +144,9 @@ def get_schedule_jump(t_T, n_sample, jump_length, jump_n_sample,
 
     _check_times(ts, -1, t_T)
 
+    # ts = [5*i-1 for i in range(25, 0, -1)] + [-1]
+    # print(ts)
+
     return ts
 
 

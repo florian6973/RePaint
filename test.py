@@ -65,20 +65,43 @@ import numpy as np
 
 
 def main(conf: conf_mgt.Default_Conf):    
-    fig = plt.figure()
+    fig = plt.figure(figsize=(10, 5))
+    plt.subplot(1, 2, 1)
     im = plt.imshow(np.random.rand(10,10), animated=True)  # Initialize with a random image
-    img_src = None
+    plt.subplot(1, 2, 2)
+    gr = plt.plot(np.random.rand(10), marker='x')
+    scatter = plt.scatter(np.random.rand(10), np.random.rand(10))
 
     queue = mp.Queue()
 
-    def callback(img):
+    times = []
+
+    def callback(args):
         while not queue.empty():
             data = queue.get_nowait()
-            data = (data - np.min(data))/(np.max(data) - np.min(data))
-            print(data[1,1])
-            print(data.shape)
-            im.set_array(data)  # Update the image
-        return im,
+            if isinstance(data, tuple):
+                if isinstance(data[0], str):
+                    times.extend(data[1])
+                    data_arr = np.array(data[1])
+                    x = np.arange(data_arr.shape[0])
+                    gr[0].set_ydata(data_arr)
+                    gr[0].set_xdata(x)
+                    gr[0].axes.set_xlim(0, data_arr.shape[0])
+                    gr[0].axes.set_ylim(np.min(data_arr), np.max(data_arr))
+                else:
+                    idx = data[0]
+                    data = data[1]
+                    data = (data - np.min(data))/(np.max(data) - np.min(data))
+                    # print(data[1,1])
+                    # print(data.shape)
+
+                    # scatter.set_xdata([idx])
+                    # scatter.set_ydata([times[idx]])
+                    if times is not None:
+                        scatter.set_offsets(np.c_[idx, times[idx]])
+
+                    im.set_array(data)  # Update the image
+        return im, gr, scatter
 
     ani = animation.FuncAnimation(fig, callback, frames=range(1000), interval=1000, blit=False)
 
@@ -88,8 +111,12 @@ def main(conf: conf_mgt.Default_Conf):
 
     plt.show()
 
+def sample_now(conf, callback_code):    
+    th.random.manual_seed(conf['seed'])
+    np.random.seed(conf['seed'])
 
-def sample_now(conf, callback_code):
+    assert conf['schedule_jump_params']['t_T'] == int(conf['timestep_respacing']), (conf['schedule_jump_params']['t_T'], conf['timestep_respacing'])
+
     print("Start", conf['name'])
 
     device = dist_util.dev(conf.get('device'))
@@ -176,6 +203,10 @@ def sample_now(conf, callback_code):
             classes = th.randint(
                 low=0, high=NUM_CLASSES, size=(batch_size,), device=device
             )
+            import json
+            with open( 'inet_labels.json', 'r') as f:
+                class_names = json.load(f)
+            print("classes:", classes, class_names[str(classes[0].item())])
             model_kwargs["y"] = classes
 
         sample_fn = (

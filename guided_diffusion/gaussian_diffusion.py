@@ -29,7 +29,7 @@ import torch as th
 from collections import defaultdict
 
 from guided_diffusion.scheduler import get_schedule_jump
-
+import math
 def get_named_beta_schedule(schedule_name, num_diffusion_timesteps, use_scale):
     """
     Get a pre-defined beta schedule for the given name.
@@ -53,6 +53,34 @@ def get_named_beta_schedule(schedule_name, num_diffusion_timesteps, use_scale):
         return np.linspace(
             beta_start, beta_end, num_diffusion_timesteps, dtype=np.float64
         )
+    elif schedule_name == "cosine":        
+        return betas_for_alpha_bar(
+            num_diffusion_timesteps,
+            lambda t: math.cos((t + 0.008) / 1.008 * math.pi / 2) ** 2,
+        )
+    else:
+        raise NotImplementedError(f"unknown beta schedule: {schedule_name}")
+
+
+
+def betas_for_alpha_bar(num_diffusion_timesteps, alpha_bar, max_beta=0.999):
+    """
+    Create a beta schedule that discretizes the given alpha_t_bar function,
+    which defines the cumulative product of (1-beta) over time from t = [0,1].
+
+    :param num_diffusion_timesteps: the number of betas to produce.
+    :param alpha_bar: a lambda that takes an argument t from 0 to 1 and
+                      produces the cumulative product of (1-beta) up to that
+                      part of the diffusion process.
+    :param max_beta: the maximum beta to use; use values lower than 1 to
+                     prevent singularities.
+    """
+    betas = []
+    for i in range(num_diffusion_timesteps):
+        t1 = i / num_diffusion_timesteps
+        t2 = (i + 1) / num_diffusion_timesteps
+        betas.append(min(1 - alpha_bar(t2) / alpha_bar(t1), max_beta))
+    return np.array(betas)
 
 class ModelMeanType(enum.Enum):
     """
@@ -488,10 +516,21 @@ class GaussianDiffusion:
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
+        
         if noise is not None:
             image_after_step = noise
         else:
             image_after_step = th.randn(*shape, device=device)
+        
+        # import os
+        # if os.path.exists('img.npy'):
+        #     print("loading img.npy")
+        #     image_after_step_comp = th.from_numpy(np.load('img.npy')).to(device)
+        #     assert np.allclose(image_after_step.cpu().numpy(), image_after_step_comp.cpu().numpy())
+        #     print("loaded img.npy")
+        # else:
+        #     print("saving img.npy")
+        #     np.save('img.npy', image_after_step.cpu().numpy())
 
         debug_steps = conf.pget('debug.num_timesteps')
 
@@ -505,13 +544,15 @@ class GaussianDiffusion:
 
         if conf.schedule_jump_params:
             times = get_schedule_jump(**conf.schedule_jump_params)
+            if callback is not None:
+                callback.put(('times', times))
 
             time_pairs = list(zip(times[:-1], times[1:]))
             if progress:
                 from tqdm.auto import tqdm
                 time_pairs = tqdm(time_pairs)
 
-            for t_last, t_cur in time_pairs:
+            for i_idx, (t_last, t_cur) in enumerate(time_pairs):
                 idx_wall += 1
                 t_last_t = th.tensor([t_last] * shape[0],  # pylint: disable=not-callable
                                      device=device)
@@ -533,8 +574,8 @@ class GaussianDiffusion:
                         # import matplotlib.pyplot as plt
                         # plt.imshow(out['sample'][0].permute(1, 2, 0).cpu().numpy())
                         # plt.show()
-                        if callback is not None:
-                            callback.put(out['sample'][0].permute(1, 2, 0).cpu().numpy())
+                        # if callback is not None:
+                        #     callback.put(out['sample'][0].permute(1, 2, 0).cpu().numpy())
                         image_after_step = out["sample"]
                         pred_xstart = out["pred_xstart"]
 
@@ -550,6 +591,17 @@ class GaussianDiffusion:
                         image_before_step, image_after_step,
                         est_x_0=out['pred_xstart'], t=t_last_t+t_shift, debug=False)
                     pred_xstart = out["pred_xstart"]
+                if callback is not None:
+                    callback.put((i_idx, image_after_step[0].permute(1, 2, 0).cpu().numpy()))
+                file_name = f'img-{i_idx}.npy'
+                import os
+                if not os.path.exists(file_name):
+                    np.save(file_name, image_after_step.cpu().numpy())
+                else:
+                    print("file exists:", file_name)
+                    img = np.load(file_name)
+                    assert np.allclose(img, image_after_step.cpu().numpy())
+                    print("loaded file:", file_name)
 
 def _extract_into_tensor(arr, timesteps, broadcast_shape):
     """

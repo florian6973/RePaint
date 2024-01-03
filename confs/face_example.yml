@@ -30,7 +30,7 @@ classifier_scale: 4.0
 lr_kernel_n_std: 2
 num_samples: 100
 show_progress: true
-timestep_respacing: '250'
+timestep_respacing: '25'
 use_kl: false
 predict_xstart: false
 rescale_timesteps: false
@@ -56,13 +56,14 @@ model_path: ./data/pretrained/celeba256_250000.pt
 name: face_example
 inpa_inj_sched_prev: true
 n_jobs: 1
+seed: 0
 print_estimated_vars: true
 inpa_inj_sched_prev_cumnoise: false
 schedule_jump_params:
-  t_T: 250
+  t_T: 25 # 38
   n_sample: 1
-  jump_length: 1
-  jump_n_sample: 1
+  jump_length: 2
+  jump_n_sample: 2
 data:
   eval:
     paper_face_mask:
@@ -79,7 +80,7 @@ data:
       batch_size: 1
       return_dataloader: true
       offset: 0
-      max_len: 8
+      max_len: 1
       paths:
         srs: ./log/face_example/inpainted
         lrs: ./log/face_example/gt_masked

@@ -76,6 +76,10 @@ def space_timesteps(num_timesteps, section_counts):
             cur_idx += frac_stride
         all_steps += taken_steps
         start_idx += size
+    print(all_steps)
+    print(len(all_steps))
+    # all_steps = [i for i in range(25)] + [25+90*i for i in range(1, 11)]+ [925, 950, 975, 999]
+    # print(all_steps)
     return set(all_steps)
 
 
