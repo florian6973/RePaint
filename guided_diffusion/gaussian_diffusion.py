@@ -346,6 +346,7 @@ class GaussianDiffusion:
                  - 'pred_xstart': a prediction of x_0.
         """
         noise = th.randn_like(x)
+        # print("t:", t[0].item(), "idx_wall:", idx_wall)
 
         if conf.inpa_inj_sched_prev:
 
@@ -419,7 +420,8 @@ class GaussianDiffusion:
         device=None,
         progress=True,
         return_all=False,
-        conf=None
+        conf=None,
+        callback=None,        
     ):
         """
         Generate samples from the model.
@@ -451,7 +453,8 @@ class GaussianDiffusion:
             model_kwargs=model_kwargs,
             device=device,
             progress=progress,
-            conf=conf
+            conf=conf,
+            callback=callback
         ):
             final = sample
 
@@ -471,7 +474,8 @@ class GaussianDiffusion:
         model_kwargs=None,
         device=None,
         progress=False,
-        conf=None
+        conf=None,
+        callback=None
     ):
         """
         Generate samples from the model and yield intermediate samples from
@@ -526,6 +530,11 @@ class GaussianDiffusion:
                             conf=conf,
                             pred_xstart=pred_xstart
                         )
+                        # import matplotlib.pyplot as plt
+                        # plt.imshow(out['sample'][0].permute(1, 2, 0).cpu().numpy())
+                        # plt.show()
+                        if callback is not None:
+                            callback.put(out['sample'][0].permute(1, 2, 0).cpu().numpy())
                         image_after_step = out["sample"]
                         pred_xstart = out["pred_xstart"]
 

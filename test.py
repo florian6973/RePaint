@@ -14,6 +14,8 @@
 #
 # This repository was forked from https://github.com/openai/guided-diffusion, which is under the MIT license
 
+import multiprocessing as mp
+
 """
 Like image_sample.py, but use a noisy image classifier to guide the sampling
 process towards more realistic images.
@@ -56,16 +58,49 @@ def toU8(sample):
     return sample
 
 
-def main(conf: conf_mgt.Default_Conf):
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import numpy as np
 
+
+
+def main(conf: conf_mgt.Default_Conf):    
+    fig = plt.figure()
+    im = plt.imshow(np.random.rand(10,10), animated=True)  # Initialize with a random image
+    img_src = None
+
+    queue = mp.Queue()
+
+    def callback(img):
+        while not queue.empty():
+            data = queue.get_nowait()
+            data = (data - np.min(data))/(np.max(data) - np.min(data))
+            print(data[1,1])
+            print(data.shape)
+            im.set_array(data)  # Update the image
+        return im,
+
+    ani = animation.FuncAnimation(fig, callback, frames=range(1000), interval=1000, blit=False)
+
+    # return sample_now(conf, callback_code)
+    p = mp.Process(target=sample_now, args=(conf, queue))
+    p.start()
+
+    plt.show()
+
+
+def sample_now(conf, callback_code):
     print("Start", conf['name'])
 
     device = dist_util.dev(conf.get('device'))
+    print("device:", device)
 
 
+    print("loading model...")
     model, diffusion = create_model_and_diffusion(
         **select_args(conf, model_and_diffusion_defaults().keys()), conf=conf
     )
+    print("loading state")
     model.load_state_dict(
         dist_util.load_state_dict(os.path.expanduser(
             conf.model_path), map_location="cpu")
@@ -81,6 +116,8 @@ def main(conf: conf_mgt.Default_Conf):
         print("loading classifier...")
         classifier = create_classifier(
             **select_args(conf, classifier_defaults().keys()))
+        print(select_args(conf, classifier_defaults().keys()))
+        print(conf.classifier_path)
         classifier.load_state_dict(
             dist_util.load_state_dict(os.path.expanduser(
                 conf.classifier_path), map_location="cpu")
@@ -113,10 +150,11 @@ def main(conf: conf_mgt.Default_Conf):
 
     eval_name = conf.get_default_eval_name()
 
+    print("eval_name:", eval_name)
+    print("loading dataloader...")
     dl = conf.get_dataloader(dset=dset, dsName=eval_name)
 
     for batch in iter(dl):
-
         for k in batch.keys():
             if isinstance(batch[k], th.Tensor):
                 batch[k] = batch[k].to(device)
@@ -144,7 +182,6 @@ def main(conf: conf_mgt.Default_Conf):
             diffusion.p_sample_loop if not conf.use_ddim else diffusion.ddim_sample_loop
         )
 
-
         result = sample_fn(
             model_fn,
             (batch_size, 3, conf.image_size, conf.image_size),
@@ -154,7 +191,8 @@ def main(conf: conf_mgt.Default_Conf):
             device=device,
             progress=show_progress,
             return_all=True,
-            conf=conf
+            conf=conf,
+            callback=callback_code
         )
         srs = toU8(result['sample'])
         gts = toU8(result['gt'])
