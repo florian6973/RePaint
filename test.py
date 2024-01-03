@@ -118,6 +118,7 @@ def sample_now(conf, callback_code):
     assert conf['schedule_jump_params']['t_T'] == int(conf['timestep_respacing']), (conf['schedule_jump_params']['t_T'], conf['timestep_respacing'])
 
     print("Start", conf['name'])
+    callback_code.put(('msg', f"Start {conf['name']}"))
 
     device = dist_util.dev(conf.get('device'))
     print("device:", device)
@@ -132,7 +133,8 @@ def sample_now(conf, callback_code):
             conf.model_path), map_location="cpu")
     )
     model.to(device)
-    
+    callback_code.put(('msg', f"State loaded"))
+
     if conf.use_fp16:
         model.convert_to_fp16()
     model.eval()
