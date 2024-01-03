@@ -490,6 +490,20 @@ class GaussianDiffusion:
             return final
         else:
             return final["sample"]
+        
+    def save_state(self, *args):
+        import pickle
+        print("saving state.npy")
+        with open('state.pkl', 'wb') as f:
+            pickle.dump(args, f)
+
+    def load_state(self):
+        import pickle
+        print("loading state.npy")
+        with open('state.pkl', 'rb') as f:
+            elts = pickle.load(f)
+        return elts
+
 
     def p_sample_loop_progressive(
         self,
@@ -521,33 +535,36 @@ class GaussianDiffusion:
             image_after_step = noise
         else:
             image_after_step = th.randn(*shape, device=device)
+
+        # debug_steps = conf.pget('debug.num_timesteps')
         
-        # import os
-        # if os.path.exists('img.npy'):
-        #     print("loading img.npy")
-        #     image_after_step_comp = th.from_numpy(np.load('img.npy')).to(device)
-        #     assert np.allclose(image_after_step.cpu().numpy(), image_after_step_comp.cpu().numpy())
-        #     print("loaded img.npy")
-        # else:
-        #     print("saving img.npy")
-        #     np.save('img.npy', image_after_step.cpu().numpy())
-
-        debug_steps = conf.pget('debug.num_timesteps')
-
-        self.gt_noises = None  # reset for next image
-
-
-        pred_xstart = None
-
-        idx_wall = -1
-        sample_idxs = defaultdict(lambda: 0)
-
         if conf.schedule_jump_params:
-            times = get_schedule_jump(**conf.schedule_jump_params)
+            import os
+            if os.path.exists('state.pkl'):
+                print("loading state.npy")
+                # image_after_step_comp = th.from_numpy(np.load('checkpoint.npy')).to(device)
+                # assert np.allclose(image_after_step.cpu().numpy(), image_after_step_comp.cpu().numpy())
+                # image_after_step = image_after_step_comp
+                image_after_step, self.gt_noises, pred_xstart, idx_wall, times, idx_crop = self.load_state()
+                print("loaded state.npy")
+            else:
+                # np.save('checkpoint.npy', image_after_step.cpu().numpy())            
+                self.gt_noises = None  # reset for next image
+
+                pred_xstart = None
+
+                idx_wall = -1
+                times = get_schedule_jump(**conf.schedule_jump_params)
+                idx_crop = 0
+
+                self.save_state(image_after_step, self.gt_noises, pred_xstart, idx_wall, times, idx_crop)
+
+            sample_idxs = defaultdict(lambda: 0)
+
             if callback is not None:
                 callback.put(('times', times))
 
-            time_pairs = list(zip(times[:-1], times[1:]))
+            time_pairs = list(zip(times[:-1], times[1:]))[idx_crop:]
             if progress:
                 from tqdm.auto import tqdm
                 time_pairs = tqdm(time_pairs)
@@ -591,17 +608,22 @@ class GaussianDiffusion:
                         image_before_step, image_after_step,
                         est_x_0=out['pred_xstart'], t=t_last_t+t_shift, debug=False)
                     pred_xstart = out["pred_xstart"]
+
                 if callback is not None:
-                    callback.put((i_idx, image_after_step[0].permute(1, 2, 0).cpu().numpy()))
-                file_name = f'img-{i_idx}.npy'
-                import os
-                if not os.path.exists(file_name):
-                    np.save(file_name, image_after_step.cpu().numpy())
-                else:
-                    print("file exists:", file_name)
-                    img = np.load(file_name)
-                    assert np.allclose(img, image_after_step.cpu().numpy())
-                    print("loaded file:", file_name)
+                    callback.put((idx_crop, image_after_step[0].permute(1, 2, 0).cpu().numpy()))
+
+                idx_crop += 1
+                if idx_crop == 30:
+                    self.save_state(image_after_step, self.gt_noises, pred_xstart, idx_wall, times, idx_crop)
+                # file_name = f'img-{i_idx}.npy'
+                # import os
+                # if not os.path.exists(file_name):
+                #     np.save(file_name, image_after_step.cpu().numpy())
+                # else:
+                #     print("file exists:", file_name)
+                #     img = np.load(file_name)
+                #     assert np.allclose(img, image_after_step.cpu().numpy())
+                #     print("loaded file:", file_name)
 
 def _extract_into_tensor(arr, timesteps, broadcast_shape):
     """

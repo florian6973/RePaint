@@ -62,7 +62,7 @@ schedule_jump_params:
   t_T: 25
   n_sample: 1
   jump_length: 2
-  jump_n_sample: 4
+  jump_n_sample: 1
 data:
   eval:
     lama_inet64_genhalf_n100_test:

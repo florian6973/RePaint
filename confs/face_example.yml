@@ -62,7 +62,7 @@ inpa_inj_sched_prev_cumnoise: false
 schedule_jump_params:
   t_T: 25 # 38
   n_sample: 1
-  jump_length: 2
+  jump_length: 5
   jump_n_sample: 2
 data:
   eval:

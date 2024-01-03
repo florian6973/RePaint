@@ -122,7 +122,6 @@ def sample_now(conf, callback_code):
     device = dist_util.dev(conf.get('device'))
     print("device:", device)
 
-
     print("loading model...")
     model, diffusion = create_model_and_diffusion(
         **select_args(conf, model_and_diffusion_defaults().keys()), conf=conf
@@ -133,6 +132,7 @@ def sample_now(conf, callback_code):
             conf.model_path), map_location="cpu")
     )
     model.to(device)
+    
     if conf.use_fp16:
         model.convert_to_fp16()
     model.eval()
