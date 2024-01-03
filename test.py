@@ -62,15 +62,18 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 
-
-
-def main(conf: conf_mgt.Default_Conf):    
+def main(conf):    
     fig = plt.figure(figsize=(10, 5))
     plt.subplot(1, 2, 1)
     im = plt.imshow(np.random.rand(10,10), animated=True)  # Initialize with a random image
+    plt.axis('off')
+    plt.title('Sampled image')
     plt.subplot(1, 2, 2)
     gr = plt.plot(np.random.rand(10), marker='x')
     scatter = plt.scatter(np.random.rand(10), np.random.rand(10))
+    plt.xlabel('Repaint step')
+    plt.ylabel('Diffusion time')
+    plt.title("Resampling strategy")
 
     queue = mp.Queue()
 
@@ -81,35 +84,32 @@ def main(conf: conf_mgt.Default_Conf):
             data = queue.get_nowait()
             if isinstance(data, tuple):
                 if isinstance(data[0], str):
-                    times.extend(data[1])
-                    data_arr = np.array(data[1])
-                    x = np.arange(data_arr.shape[0])
-                    gr[0].set_ydata(data_arr)
-                    gr[0].set_xdata(x)
-                    gr[0].axes.set_xlim(0, data_arr.shape[0])
-                    gr[0].axes.set_ylim(np.min(data_arr), np.max(data_arr))
+                    if data[0] == 'times':                        
+                        times.extend(data[1])
+                        data_arr = np.array(data[1])
+                        x = np.arange(data_arr.shape[0])
+                        gr[0].set_ydata(data_arr)
+                        gr[0].set_xdata(x)
+                        gr[0].axes.set_xlim(0, data_arr.shape[0])
+                        gr[0].axes.set_ylim(np.min(data_arr), np.max(data_arr))
+                    else:
+                        plt.suptitle(data[1])
                 else:
                     idx = data[0]
                     data = data[1]
                     data = (data - np.min(data))/(np.max(data) - np.min(data))
-                    # print(data[1,1])
-                    # print(data.shape)
-
-                    # scatter.set_xdata([idx])
-                    # scatter.set_ydata([times[idx]])
                     if times is not None:
                         scatter.set_offsets(np.c_[idx, times[idx]])
-
-                    im.set_array(data)  # Update the image
+                    im.set_array(data)  # Update the image                
         return im, gr, scatter
 
     ani = animation.FuncAnimation(fig, callback, frames=range(1000), interval=1000, blit=False)
 
-    # return sample_now(conf, callback_code)
     p = mp.Process(target=sample_now, args=(conf, queue))
     p.start()
 
     plt.show()
+    return p, ani
 
 def sample_now(conf, callback_code):    
     th.random.manual_seed(conf['seed'])
@@ -118,22 +118,24 @@ def sample_now(conf, callback_code):
     assert conf['schedule_jump_params']['t_T'] == int(conf['timestep_respacing']), (conf['schedule_jump_params']['t_T'], conf['timestep_respacing'])
 
     print("Start", conf['name'])
-    callback_code.put(('msg', f"Start {conf['name']}"))
+    callback_code.put(('msg', f"Start {conf['name']}..."))
 
     device = dist_util.dev(conf.get('device'))
     print("device:", device)
+    callback_code.put(('msg', f"device: {device}..."))
 
     print("loading model...")
+    callback_code.put(('msg', f"loading model..."))
     model, diffusion = create_model_and_diffusion(
         **select_args(conf, model_and_diffusion_defaults().keys()), conf=conf
     )
     print("loading state")
+    callback_code.put(('msg', f"loading state..."))
     model.load_state_dict(
         dist_util.load_state_dict(os.path.expanduser(
             conf.model_path), map_location="cpu")
     )
     model.to(device)
-    callback_code.put(('msg', f"State loaded"))
 
     if conf.use_fp16:
         model.convert_to_fp16()
@@ -143,6 +145,7 @@ def sample_now(conf, callback_code):
 
     if conf.classifier_scale > 0 and conf.classifier_path:
         print("loading classifier...")
+        callback_code.put(('msg', f"loading classifier..."))
         classifier = create_classifier(
             **select_args(conf, classifier_defaults().keys()))
         print(select_args(conf, classifier_defaults().keys()))
@@ -181,6 +184,7 @@ def sample_now(conf, callback_code):
 
     print("eval_name:", eval_name)
     print("loading dataloader...")
+    callback_code.put(('msg', f"loading dataloader..."))
     dl = conf.get_dataloader(dset=dset, dsName=eval_name)
 
     for batch in iter(dl):
@@ -215,6 +219,7 @@ def sample_now(conf, callback_code):
             diffusion.p_sample_loop if not conf.use_ddim else diffusion.ddim_sample_loop
         )
 
+        callback_code.put(('msg', f"Start sampling..."))
         result = sample_fn(
             model_fn,
             (batch_size, 3, conf.image_size, conf.image_size),
@@ -239,6 +244,7 @@ def sample_now(conf, callback_code):
             img_names=batch['GT_name'], dset=dset, name=eval_name, verify_same=False)
 
     print("sampling complete")
+    callback_code.put(('msg', f"Sampling complete"))
 
 
 if __name__ == "__main__":

@@ -491,16 +491,22 @@ class GaussianDiffusion:
         else:
             return final["sample"]
         
-    def save_state(self, *args):
+    def get_name(self, conf):
+        if conf.save_model:
+            return conf.save_model
+        else:
+            return "state.pkl"
+        
+    def save_state(self, conf, *args):
         import pickle
         print("saving state.npy")
-        with open('state.pkl', 'wb') as f:
+        with open(self.get_name(conf), 'wb') as f:
             pickle.dump(args, f)
 
-    def load_state(self):
+    def load_state(self, conf):
         import pickle
         print("loading state.npy")
-        with open('state.pkl', 'rb') as f:
+        with open(self.get_name(conf), 'rb') as f:
             elts = pickle.load(f)
         return elts
 
@@ -540,12 +546,12 @@ class GaussianDiffusion:
         
         if conf.schedule_jump_params:
             import os
-            if os.path.exists('state.pkl'):
+            if os.path.exists(self.get_name(conf)) and conf.reload:
                 print("loading state.npy")
                 # image_after_step_comp = th.from_numpy(np.load('checkpoint.npy')).to(device)
                 # assert np.allclose(image_after_step.cpu().numpy(), image_after_step_comp.cpu().numpy())
                 # image_after_step = image_after_step_comp
-                image_after_step, self.gt_noises, pred_xstart, idx_wall, times, idx_crop = self.load_state()
+                image_after_step, self.gt_noises, pred_xstart, idx_wall, times, idx_crop = self.load_state(conf)
                 print("loaded state.npy")
             else:
                 # np.save('checkpoint.npy', image_after_step.cpu().numpy())            
@@ -557,9 +563,12 @@ class GaussianDiffusion:
                 times = get_schedule_jump(**conf.schedule_jump_params)
                 idx_crop = 0
 
-                self.save_state(image_after_step, self.gt_noises, pred_xstart, idx_wall, times, idx_crop)
+                # self.save_state(conf, image_after_step, self.gt_noises, pred_xstart, idx_wall, times, idx_crop)
 
             sample_idxs = defaultdict(lambda: 0)
+
+            if conf.manual_times:
+                times = times[:idx_crop] + conf.manual_times
 
             if callback is not None:
                 callback.put(('times', times))
@@ -613,8 +622,10 @@ class GaussianDiffusion:
                     callback.put((idx_crop, image_after_step[0].permute(1, 2, 0).cpu().numpy()))
 
                 idx_crop += 1
-                if idx_crop == 30:
-                    self.save_state(image_after_step, self.gt_noises, pred_xstart, idx_wall, times, idx_crop)
+                if conf.save_model and idx_crop in conf.save_idx:
+                    self.save_state(conf, image_after_step, self.gt_noises, pred_xstart, idx_wall, times, idx_crop)
+                if conf.stop_it and idx_crop in conf.stop_it:
+                    break
                 # file_name = f'img-{i_idx}.npy'
                 # import os
                 # if not os.path.exists(file_name):
