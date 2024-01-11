@@ -72,6 +72,8 @@ def build_conf(exp, conf_name, total_it=20, n=1):
     conf_arg = conf_mgt.conf_base.Default_Conf()
     conf_arg.update(yamlread(conf_path))
 
+    conf_arg["cond_y"] = 930 # 933
+
     eval_name = conf_arg.get_default_eval_name()
     # name
     # seed
@@ -95,6 +97,8 @@ def build_conf(exp, conf_name, total_it=20, n=1):
     conf_arg['data']['eval'][eval_name]['max_len'] = n
     conf_arg['timestep_respacing'] = str(total_it)
     conf_arg['schedule_jump_params']['t_T'] = total_it
+    # conf_arg['schedule_jump_params']['jump_length'] = 5
+    # conf_arg['schedule_jump_params']['jump_n_sample'] = 3
 
     conf_arg['seed'] = 0
 
@@ -172,6 +176,8 @@ def sample_now(conf, callback_code):
 
     device = dist_util.dev(conf.get('device'))
     print("device:", device)
+    conf_y = conf.get('cond_y')
+    print("cond_y:", conf_y)
     callback_code.put(('msg', f"device: {device}..."))
 
     print("loading model...")    
@@ -259,18 +265,29 @@ def sample_now(conf, callback_code):
 
         batch_size = model_kwargs["gt"].shape[0]
 
-        if conf.cond_y is not None:
-            classes = th.ones(batch_size, dtype=th.long, device=device)
-            model_kwargs["y"] = classes * conf.cond_y
-        else:
-            classes = th.randint(
-                low=0, high=NUM_CLASSES, size=(batch_size,), device=device
-            )
+        # print('cond_y', conf.conf_y)
+
+        # if 'cond_y' in conf:
+            # conf.cond_y = conf['cond_y']
+        classes = th.ones(batch_size, dtype=th.long, device=device) * conf_y
+        model_kwargs["y"] = classes
+        print(model_kwargs["y"])
+        # if conf_y is not None:
+        #     classes = th.ones(batch_size, dtype=th.long, device=device)
+        #     model_kwargs["y"] = classes * conf_y
+        # else:
+        #     classes = th.randint(
+        #         low=0, high=NUM_CLASSES, size=(batch_size,), device=device
+        #     )
+        #     model_kwargs["y"] = classes
+        try:
             import json
             with open( 'inet_labels.json', 'r') as f:
                 class_names = json.load(f)
+            print(classes)
             print("classes:", classes, class_names[str(classes[0].item())])
-            model_kwargs["y"] = classes
+        except:
+            print("Failed to load class names")
 
         sample_fn = (
             diffusion.p_sample_loop if not conf.use_ddim else diffusion.ddim_sample_loop

@@ -399,15 +399,17 @@ class GaussianDiffusion:
 
                     weighed_gt = gt_part + noise_part
 
-                x = (
-                    gt_keep_mask * (
-                        weighed_gt
+                print("t:", t)
+                if x.item() == 18:
+                    x = (
+                        gt_keep_mask * (
+                            weighed_gt
+                        )
+                        +
+                        (1 - gt_keep_mask) * (
+                            x
+                        )
                     )
-                    +
-                    (1 - gt_keep_mask) * (
-                        x
-                    )
-                )
 
 
         out = self.p_mean_variance(
