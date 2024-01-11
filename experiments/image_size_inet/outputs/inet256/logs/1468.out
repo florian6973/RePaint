@@ -1,0 +1,7 @@
+Start test_inet256_genhalf
+device: cuda
+loading model...
+Setting up [LPIPS] perceptual loss: trunk [alex], v[0.1], spatial [off]
+Loading model from: c:\Users\PolletStars\Anaconda3\envs\repaint\lib\site-packages\lpips\weights\v0.1\alex.pth
+[0]
+1

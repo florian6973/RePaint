@@ -1,0 +1,21 @@
+c:\Users\PolletStars\Anaconda3\envs\repaint\lib\site-packages\torchvision\models\_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+c:\Users\PolletStars\Anaconda3\envs\repaint\lib\site-packages\torchvision\models\_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=AlexNet_Weights.IMAGENET1K_V1`. You can also use `weights=AlexNet_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+Process Process-5:
+Traceback (most recent call last):
+  File "c:\Users\PolletStars\Anaconda3\envs\repaint\lib\multiprocessing\process.py", line 314, in _bootstrap
+    self.run()
+  File "c:\Users\PolletStars\Anaconda3\envs\repaint\lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "c:\Users\PolletStars\Documents\Git\RePaint\test.py", line 180, in sample_now
+    model, diffusion = create_model_and_diffusion(
+  File "c:\Users\PolletStars\Documents\Git\RePaint\guided_diffusion\script_util.py", line 135, in create_model_and_diffusion
+    diffusion = create_gaussian_diffusion(
+  File "c:\Users\PolletStars\Documents\Git\RePaint\guided_diffusion\script_util.py", line 288, in create_gaussian_diffusion
+    return SpacedDiffusion(
+  File "c:\Users\PolletStars\Documents\Git\RePaint\guided_diffusion\respace.py", line 123, in __init__
+    super().__init__(conf=conf, **kwargs)
+  File "c:\Users\PolletStars\Documents\Git\RePaint\guided_diffusion\gaussian_diffusion.py", line 186, in __init__
+    np.append(self.posterior_variance[1], self.posterior_variance[1:])
+IndexError: index 1 is out of bounds for axis 0 with size 1

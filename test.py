@@ -15,6 +15,7 @@
 # This repository was forked from https://github.com/openai/guided-diffusion, which is under the MIT license
 
 import multiprocessing as mp
+from pathlib import Path
 
 """
 Like image_sample.py, but use a noisy image classifier to guide the sampling
@@ -29,6 +30,10 @@ import time
 import conf_mgt
 from utils import yamlread
 from guided_diffusion import dist_util
+from time import perf_counter
+import cv2
+import lpips
+import pandas as pd
 
 # Workaround
 try:
@@ -61,6 +66,44 @@ def toU8(sample):
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
+
+def build_conf(exp, conf_name, total_it=20, n=1):
+    conf_path = f"experiments/{exp}/confs/{conf_name}.yml"
+    conf_arg = conf_mgt.conf_base.Default_Conf()
+    conf_arg.update(yamlread(conf_path))
+
+    eval_name = conf_arg.get_default_eval_name()
+    # name
+    # seed
+    # gt path
+    conf_arg['data']['eval'][eval_name]['gt_path'] =  \
+        f"experiments/{exp}/gts/{conf_name}/img"
+    conf_arg['data']['eval'][eval_name]['mask_path'] =  \
+        f"experiments/{exp}/gts/{conf_name}/mask"
+    conf_arg['data']['eval'][eval_name]['paths']['srs'] =  \
+        f"experiments/{exp}/outputs/{conf_name}/inpainted"
+    conf_arg['data']['eval'][eval_name]['paths']['lrs'] =  \
+        f"experiments/{exp}/outputs/{conf_name}/gt_masked"
+    conf_arg['data']['eval'][eval_name]['paths']['gts'] =  \
+        f"experiments/{exp}/outputs/{conf_name}/gt"
+    conf_arg['data']['eval'][eval_name]['paths']['gt_keep_masks'] =  \
+        f"experiments/{exp}/outputs/{conf_name}/gt_keep_mask"
+    conf_arg['log_dir'] = f"experiments/{exp}/outputs/{conf_name}/logs/"
+    # mask path
+    # max_len
+    # paths: srs, lrs, gts, gt_keep_masks
+    conf_arg['data']['eval'][eval_name]['max_len'] = n
+    conf_arg['timestep_respacing'] = str(total_it)
+    conf_arg['schedule_jump_params']['t_T'] = total_it
+
+    conf_arg['seed'] = 0
+
+    conf_arg['reload'] = False
+    # conf_arg['save_model'] = f'experiments/{exp}/outputs/{conf_name}/model.pkl'
+    # conf_arg['save_idx'] = [14]
+    # conf_arg['stop_it'] = [14]
+
+    return conf_arg
 
 def main(conf):    
     fig = plt.figure(figsize=(10, 5))
@@ -111,7 +154,14 @@ def main(conf):
     plt.show()
     return p, ani
 
-def sample_now(conf, callback_code):    
+import sys
+
+
+def sample_now(conf, callback_code): 
+    os.makedirs(conf['log_dir'], exist_ok=True)
+    sys.stdout = open(conf['log_dir'] + str(os.getpid()) + ".out", "w")
+    sys.stderr = open(conf['log_dir'] + str(os.getpid()) + ".err", "w")
+
     th.random.manual_seed(conf['seed'])
     np.random.seed(conf['seed'])
 
@@ -124,7 +174,8 @@ def sample_now(conf, callback_code):
     print("device:", device)
     callback_code.put(('msg', f"device: {device}..."))
 
-    print("loading model...")
+    print("loading model...")    
+    loss_fn_alex = lpips.LPIPS(net='alex') # best forward scores
     callback_code.put(('msg', f"loading model..."))
     model, diffusion = create_model_and_diffusion(
         **select_args(conf, model_and_diffusion_defaults().keys()), conf=conf
@@ -187,7 +238,11 @@ def sample_now(conf, callback_code):
     callback_code.put(('msg', f"loading dataloader..."))
     dl = conf.get_dataloader(dset=dset, dsName=eval_name)
 
+    counter = 0
+    count_max = conf['data']['eval'][eval_name]['max_len']
+    times = []
     for batch in iter(dl):
+        counter += 1
         for k in batch.keys():
             if isinstance(batch[k], th.Tensor):
                 batch[k] = batch[k].to(device)
@@ -195,6 +250,8 @@ def sample_now(conf, callback_code):
         model_kwargs = {}
 
         model_kwargs["gt"] = batch['GT']
+
+
 
         gt_keep_mask = batch.get('gt_keep_mask')
         if gt_keep_mask is not None:
@@ -219,7 +276,8 @@ def sample_now(conf, callback_code):
             diffusion.p_sample_loop if not conf.use_ddim else diffusion.ddim_sample_loop
         )
 
-        callback_code.put(('msg', f"Start sampling..."))
+        callback_code.put(('msg', f"Start sampling... {counter}/{count_max}"))
+        time_begin = perf_counter()
         result = sample_fn(
             model_fn,
             (batch_size, 3, conf.image_size, conf.image_size),
@@ -232,6 +290,8 @@ def sample_now(conf, callback_code):
             conf=conf,
             callback=callback_code
         )
+        time_end = perf_counter()
+        times.append(time_end - time_begin)
         srs = toU8(result['sample'])
         gts = toU8(result['gt'])
         lrs = toU8(result.get('gt') * model_kwargs.get('gt_keep_mask') + (-1) *
@@ -242,6 +302,31 @@ def sample_now(conf, callback_code):
         conf.eval_imswrite(
             srs=srs, gts=gts, lrs=lrs, gt_keep_masks=gt_keep_masks,
             img_names=batch['GT_name'], dset=dset, name=eval_name, verify_same=False)
+        
+    result_dir = str(Path(conf['log_dir']).parent) + '/results/'
+    os.makedirs(result_dir, exist_ok=True)
+    # with open(result_dir + conf['name'] + '.times', 'w') as f:
+    #     np.savetxt(f, times, fmt='%f')
+
+    # lpips score
+    losses = []
+    for img in os.listdir(conf['data']['eval'][eval_name]['gt_path'])[:count_max]:
+        file_img0 = os.path.join(conf['data']['eval'][eval_name]['paths']['gts'], img)
+        file_img1 = os.path.join(conf['data']['eval'][eval_name]['paths']['srs'], img)
+        img0 = cv2.imread(file_img0, cv2.IMREAD_UNCHANGED)
+        img1 = cv2.imread(file_img1, cv2.IMREAD_UNCHANGED)
+
+        print("LPIPS for", img)
+
+        img0 = th.from_numpy(img0).permute(2, 0, 1).unsqueeze(0).float() / 255
+        img1 = th.from_numpy(img1).permute(2, 0, 1).unsqueeze(0).float() / 255
+
+        d = loss_fn_alex(img0, img1)
+        losses.append(d.item())
+
+    results = pd.DataFrame({'loss': losses, 'time': times})
+    results = results.round(4)
+    results.to_csv(result_dir + conf['name'] + '.csv')
 
     print("sampling complete")
     callback_code.put(('msg', f"Sampling complete"))
