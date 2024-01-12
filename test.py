@@ -16,6 +16,7 @@
 
 import multiprocessing as mp
 from pathlib import Path
+import numpy as np
 
 """
 Like image_sample.py, but use a noisy image classifier to guide the sampling
@@ -132,7 +133,7 @@ def main(conf):
     plt.title("Sampled image")
     plt.subplot(1, 2, 2)
     gr = plt.plot(np.random.rand(10), marker="x")
-    scatter = plt.scatter(np.random.rand(10), np.random.rand(10))
+    scatter = plt.scatter(np.random.rand(10), np.random.rand(10), color='red', zorder=10)
     plt.xlabel("Repaint step")
     plt.ylabel("Diffusion time")
     plt.title("Resampling strategy")
@@ -154,6 +155,7 @@ def main(conf):
                         gr[0].set_xdata(x)
                         gr[0].axes.set_xlim(0, data_arr.shape[0])
                         gr[0].axes.set_ylim(np.min(data_arr), np.max(data_arr))
+                        np.savetxt(conf["log_dir"] + "/times.txt", np.c_[x, data_arr], fmt="%f")
                     else:
                         plt.suptitle(data[1])
                         if data[1] == "Sampling complete":
@@ -390,9 +392,9 @@ def sample_now(conf, callback_code):
 
         if img0.shape[0] > 64:
             # downsample to 64x64
-            img0 = cv2.resize(img0, (64, 64), interpolation=cv2.INTER_AREA)
+            img0 = cv2.resize(img0 * 255, (64, 64), interpolation=cv2.INTER_AREA)
             cv2.imwrite(file_img0 + ".n.png", img0)
-            img1 = cv2.resize(img1, (64, 64), interpolation=cv2.INTER_AREA)
+            img1 = cv2.resize(img1 * 255, (64, 64), interpolation=cv2.INTER_AREA)
             cv2.imwrite(file_img1 + ".dn.png", img1)
             print("resizing to 64x64")
 

@@ -268,7 +268,7 @@ def create_gaussian_diffusion(
     timestep_respacing="",
     conf=None
 ):
-
+    print("Betas step", steps)
     betas = gd.get_named_beta_schedule(noise_schedule, steps, use_scale=True)
 
     if conf.use_value_logger:

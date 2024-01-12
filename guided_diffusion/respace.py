@@ -114,6 +114,8 @@ class SpacedDiffusion(GaussianDiffusion):
                     last_alpha_cumprod = alpha_cumprod
                     self.timestep_map.append(i)
 
+        np.savetxt("cm.txt", base_diffusion.alphas_cumprod, fmt="%f")
+
         kwargs["betas"] = np.array(new_betas)
 
         if conf.use_value_logger:

@@ -159,6 +159,7 @@ class GaussianDiffusion:
         assert (betas > 0).all() and (betas <= 1).all()
 
         self.num_timesteps = int(betas.shape[0])
+        print("Timestep number:", self.num_timesteps)
 
         alphas = 1.0 - betas
         self.alphas_cumprod = np.cumprod(alphas, axis=0)
@@ -200,6 +201,7 @@ class GaussianDiffusion:
 
     def _undo(self, img_out, t):
         beta = _extract_into_tensor(self.betas, t, img_out.shape)
+        print("Extracting beta:", t, beta.shape, beta)
 
         img_in_est = th.sqrt(1 - beta) * img_out + \
             th.sqrt(beta) * th.randn_like(img_out)

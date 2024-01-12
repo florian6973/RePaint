@@ -1,0 +1,47 @@
+/workspace/.miniconda3/lib/python3.11/site-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
+  warnings.warn(
+/workspace/.miniconda3/lib/python3.11/site-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=AlexNet_Weights.IMAGENET1K_V1`. You can also use `weights=AlexNet_Weights.DEFAULT` to get the most up-to-date weights.
+  warnings.warn(msg)
+Process Process-15:
+Traceback (most recent call last):
+  File "/workspace/.miniconda3/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+    self.run()
+  File "/workspace/.miniconda3/lib/python3.11/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "/workspace/RePaint/test.py", line 337, in sample_now
+    result = sample_fn(
+             ^^^^^^^^^^
+  File "/workspace/RePaint/guided_diffusion/gaussian_diffusion.py", line 476, in p_sample_loop
+    for sample in self.p_sample_loop_progressive(
+  File "/workspace/RePaint/guided_diffusion/gaussian_diffusion.py", line 591, in p_sample_loop_progressive
+    out = self.p_sample(
+          ^^^^^^^^^^^^^^
+  File "/workspace/RePaint/guided_diffusion/gaussian_diffusion.py", line 415, in p_sample
+    out = self.p_mean_variance(
+          ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/RePaint/guided_diffusion/respace.py", line 128, in p_mean_variance
+    return super().p_mean_variance(self._wrap_model(model), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/RePaint/guided_diffusion/gaussian_diffusion.py", line 265, in p_mean_variance
+    model_output = model(x, self._scale_timesteps(t), **model_kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/RePaint/guided_diffusion/respace.py", line 174, in __call__
+    return self.model(x, new_ts, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/RePaint/test.py", line 273, in model_fn
+    return model(x, t, y if conf.class_cond else None, gt=gt)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.miniconda3/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/.miniconda3/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/RePaint/guided_diffusion/unet.py", line 653, in forward
+    if timesteps[0].item() > self.conf.diffusion_steps:
+       ^^^^^^^^^^^^^^^^^^^
+RuntimeError: CUDA error: device-side assert triggered
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1.
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+

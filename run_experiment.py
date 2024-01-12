@@ -40,6 +40,7 @@ while still_running:
                         plt.tight_layout()
                         plt.savefig(conf["log_dir"] + "/times.png")
                         plt.close()
+                        np.savetxt(conf["log_dir"] + "/times.csv", np.c_[x, data_arr], delimiter=",")
                     else:
                         print("p", i, data[0], data[1])
                         # if data[1] == "Sampling complete":
