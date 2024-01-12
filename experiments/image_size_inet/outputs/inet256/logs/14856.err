@@ -1,23 +1,0 @@
-c:\Users\PolletStars\Anaconda3\envs\repaint\lib\site-packages\torchvision\models\_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
-  warnings.warn(
-c:\Users\PolletStars\Anaconda3\envs\repaint\lib\site-packages\torchvision\models\_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=AlexNet_Weights.IMAGENET1K_V1`. You can also use `weights=AlexNet_Weights.DEFAULT` to get the most up-to-date weights.
-  warnings.warn(msg)
-  0%|          | 0/10 [00:00<?, ?it/s] 10%|#         | 1/10 [00:19<02:52, 19.18s/it] 20%|##        | 2/10 [00:37<02:31, 18.91s/it] 30%|###       | 3/10 [00:55<02:07, 18.23s/it] 40%|####      | 4/10 [01:11<01:45, 17.60s/it] 50%|#####     | 5/10 [01:28<01:26, 17.30s/it] 60%|######    | 6/10 [01:45<01:08, 17.06s/it] 70%|#######   | 7/10 [02:01<00:50, 16.82s/it] 80%|########  | 8/10 [02:18<00:33, 16.68s/it] 90%|######### | 9/10 [02:34<00:16, 16.66s/it]100%|##########| 10/10 [02:51<00:00, 16.78s/it]100%|##########| 10/10 [02:51<00:00, 17.17s/it]
-  0%|          | 0/10 [00:00<?, ?it/s] 10%|#         | 1/10 [00:03<00:33,  3.77s/it] 20%|##        | 2/10 [00:07<00:30,  3.83s/it] 30%|###       | 3/10 [00:11<00:26,  3.81s/it] 40%|####      | 4/10 [00:15<00:23,  3.86s/it] 50%|#####     | 5/10 [00:19<00:18,  3.79s/it] 60%|######    | 6/10 [00:22<00:15,  3.75s/it] 70%|#######   | 7/10 [00:26<00:11,  3.72s/it] 80%|########  | 8/10 [00:30<00:07,  3.76s/it] 90%|######### | 9/10 [00:34<00:03,  3.80s/it]100%|##########| 10/10 [00:37<00:00,  3.82s/it]100%|##########| 10/10 [00:37<00:00,  3.80s/it]
-Process Process-3:
-Traceback (most recent call last):
-  File "c:\Users\PolletStars\Anaconda3\envs\repaint\lib\multiprocessing\process.py", line 314, in _bootstrap
-    self.run()
-  File "c:\Users\PolletStars\Anaconda3\envs\repaint\lib\multiprocessing\process.py", line 108, in run
-    self._target(*self._args, **self._kwargs)
-  File "c:\Users\PolletStars\Documents\Git\RePaint\test.py", line 327, in sample_now
-    results = pd.DataFrame({'loss': losses, 'time': times})
-  File "c:\Users\PolletStars\Anaconda3\envs\repaint\lib\site-packages\pandas\core\frame.py", line 733, in __init__
-    mgr = dict_to_mgr(data, index, columns, dtype=dtype, copy=copy, typ=manager)
-  File "c:\Users\PolletStars\Anaconda3\envs\repaint\lib\site-packages\pandas\core\internals\construction.py", line 503, in dict_to_mgr
-    return arrays_to_mgr(arrays, columns, index, dtype=dtype, typ=typ, consolidate=copy)
-  File "c:\Users\PolletStars\Anaconda3\envs\repaint\lib\site-packages\pandas\core\internals\construction.py", line 114, in arrays_to_mgr
-    index = _extract_index(arrays)
-  File "c:\Users\PolletStars\Anaconda3\envs\repaint\lib\site-packages\pandas\core\internals\construction.py", line 677, in _extract_index
-    raise ValueError("All arrays must be of the same length")
-ValueError: All arrays must be of the same length

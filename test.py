@@ -38,7 +38,8 @@ import pandas as pd
 # Workaround
 try:
     import ctypes
-    libgcc_s = ctypes.CDLL('libgcc_s.so.1')
+
+    libgcc_s = ctypes.CDLL("libgcc_s.so.1")
 except:
     pass
 
@@ -51,6 +52,7 @@ from guided_diffusion.script_util import (
     create_classifier,
     select_args,
 )  # noqa: E402
+
 
 def toU8(sample):
     if sample is None:
@@ -67,59 +69,72 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 
-def build_conf(exp, conf_name, total_it=20, n=1):
+
+def build_conf(
+    exp, conf_name, total_it=20, n=1, jump_length=None, jump_n_sample=None, seed=0, parallel=True
+):
     conf_path = f"experiments/{exp}/confs/{conf_name}.yml"
     conf_arg = conf_mgt.conf_base.Default_Conf()
     conf_arg.update(yamlread(conf_path))
 
-    conf_arg["cond_y"] = 930 # 933
+    conf_arg['callback'] = parallel
+
+    conf_arg["cond_y"] = 933  # 78 # 933
+    output_folder = f"experiments/{exp}/outputs/{conf_name}/its_{total_it}_jl_{jump_length}_js_{jump_n_sample}"
 
     eval_name = conf_arg.get_default_eval_name()
     # name
     # seed
     # gt path
-    conf_arg['data']['eval'][eval_name]['gt_path'] =  \
-        f"experiments/{exp}/gts/{conf_name}/img"
-    conf_arg['data']['eval'][eval_name]['mask_path'] =  \
-        f"experiments/{exp}/gts/{conf_name}/mask"
-    conf_arg['data']['eval'][eval_name]['paths']['srs'] =  \
-        f"experiments/{exp}/outputs/{conf_name}/inpainted"
-    conf_arg['data']['eval'][eval_name]['paths']['lrs'] =  \
-        f"experiments/{exp}/outputs/{conf_name}/gt_masked"
-    conf_arg['data']['eval'][eval_name]['paths']['gts'] =  \
-        f"experiments/{exp}/outputs/{conf_name}/gt"
-    conf_arg['data']['eval'][eval_name]['paths']['gt_keep_masks'] =  \
-        f"experiments/{exp}/outputs/{conf_name}/gt_keep_mask"
-    conf_arg['log_dir'] = f"experiments/{exp}/outputs/{conf_name}/logs/"
+    conf_arg["data"]["eval"][eval_name][
+        "gt_path"
+    ] = f"experiments/{exp}/gts/{conf_name}/img"
+    conf_arg["data"]["eval"][eval_name][
+        "mask_path"
+    ] = f"experiments/{exp}/gts/{conf_name}/mask"
+    conf_arg["data"]["eval"][eval_name]["paths"]["srs"] = f"{output_folder}/inpainted"
+    conf_arg["data"]["eval"][eval_name]["paths"]["lrs"] = f"{output_folder}/gt_masked"
+    conf_arg["data"]["eval"][eval_name]["paths"]["gts"] = f"{output_folder}/gt"
+    conf_arg["data"]["eval"][eval_name]["paths"][
+        "gt_keep_masks"
+    ] = f"{output_folder}/gt_keep_mask"
+    conf_arg["log_dir"] = f"{output_folder}/logs/"
     # mask path
     # max_len
     # paths: srs, lrs, gts, gt_keep_masks
-    conf_arg['data']['eval'][eval_name]['max_len'] = n
-    conf_arg['timestep_respacing'] = str(total_it)
-    conf_arg['schedule_jump_params']['t_T'] = total_it
+    conf_arg["data"]["eval"][eval_name]["max_len"] = n
+    conf_arg["timestep_respacing"] = str(total_it)
+    conf_arg["schedule_jump_params"]["t_T"] = total_it
+    if jump_length is not None:
+        conf_arg["schedule_jump_params"]["jump_length"] = jump_length
+    if jump_n_sample is not None:
+        conf_arg["schedule_jump_params"]["jump_n_sample"] = jump_n_sample
     # conf_arg['schedule_jump_params']['jump_length'] = 5
     # conf_arg['schedule_jump_params']['jump_n_sample'] = 3
 
-    conf_arg['seed'] = 0
+    conf_arg["seed"] = seed
 
-    conf_arg['reload'] = False
+    conf_arg["reload"] = False
     # conf_arg['save_model'] = f'experiments/{exp}/outputs/{conf_name}/model.pkl'
     # conf_arg['save_idx'] = [14]
     # conf_arg['stop_it'] = [14]
 
     return conf_arg
 
-def main(conf):    
+
+def main(conf):
     fig = plt.figure(figsize=(10, 5))
     plt.subplot(1, 2, 1)
-    im = plt.imshow(np.random.rand(10,10), animated=True)  # Initialize with a random image
-    plt.axis('off')
-    plt.title('Sampled image')
+    im = plt.imshow(
+        np.random.rand(10, 10), animated=True
+    )  # Initialize with a random image
+    plt.axis("off")
+    plt.title("Sampled image")
     plt.subplot(1, 2, 2)
-    gr = plt.plot(np.random.rand(10), marker='x')
+    gr = plt.plot(np.random.rand(10), marker="x")
     scatter = plt.scatter(np.random.rand(10), np.random.rand(10))
-    plt.xlabel('Repaint step')
-    plt.ylabel('Diffusion time')
+    plt.xlabel("Repaint step")
+    plt.ylabel("Diffusion time")
     plt.title("Resampling strategy")
 
     queue = mp.Queue()
@@ -131,7 +146,7 @@ def main(conf):
             data = queue.get_nowait()
             if isinstance(data, tuple):
                 if isinstance(data[0], str):
-                    if data[0] == 'times':                        
+                    if data[0] == "times":
                         times.extend(data[1])
                         data_arr = np.array(data[1])
                         x = np.arange(data_arr.shape[0])
@@ -141,56 +156,76 @@ def main(conf):
                         gr[0].axes.set_ylim(np.min(data_arr), np.max(data_arr))
                     else:
                         plt.suptitle(data[1])
+                        if data[1] == "Sampling complete":
+                            ani.event_source.stop()
+                            print("Done")
                 else:
                     idx = data[0]
                     data = data[1]
-                    data = (data - np.min(data))/(np.max(data) - np.min(data))
+                    data = (data - np.min(data)) / (np.max(data) - np.min(data))
                     if times is not None:
                         scatter.set_offsets(np.c_[idx, times[idx]])
-                    im.set_array(data)  # Update the image                
+                    im.set_array(data)  # Update the image
         return im, gr, scatter
 
-    ani = animation.FuncAnimation(fig, callback, frames=range(1000), interval=1000, blit=False)
+  
+    if conf['callback']:
+        ani = animation.FuncAnimation(
+            fig, callback, frames=range(1000), interval=1000, blit=False
+        )
 
-    p = mp.Process(target=sample_now, args=(conf, queue))
-    p.start()
 
-    plt.show()
-    return p, ani
+        p = mp.Process(target=sample_now, args=(conf, queue))
+        p.start()
+
+        plt.show()
+
+        return p, ani
+    else:
+        print("Starting process...")
+        p = mp.Process(target=sample_now, args=(conf, queue))
+        p.start()
+
+        return p, queue
+
 
 import sys
 
 
-def sample_now(conf, callback_code): 
-    os.makedirs(conf['log_dir'], exist_ok=True)
-    sys.stdout = open(conf['log_dir'] + str(os.getpid()) + ".out", "w")
-    sys.stderr = open(conf['log_dir'] + str(os.getpid()) + ".err", "w")
+def sample_now(conf, callback_code):
+    os.makedirs(conf["log_dir"], exist_ok=True)
+    sys.stdout = open(conf["log_dir"] + str(os.getpid()) + ".out", "w")
+    sys.stderr = open(conf["log_dir"] + str(os.getpid()) + ".err", "w")
 
-    th.random.manual_seed(conf['seed'])
-    np.random.seed(conf['seed'])
+    th.random.manual_seed(conf["seed"])
+    np.random.seed(conf["seed"])
 
-    assert conf['schedule_jump_params']['t_T'] == int(conf['timestep_respacing']), (conf['schedule_jump_params']['t_T'], conf['timestep_respacing'])
+    assert conf["schedule_jump_params"]["t_T"] == int(conf["timestep_respacing"]), (
+        conf["schedule_jump_params"]["t_T"],
+        conf["timestep_respacing"],
+    )
 
-    print("Start", conf['name'])
-    callback_code.put(('msg', f"Start {conf['name']}..."))
+    print("Start", conf["name"])
+    callback_code.put(("msg", f"Start {conf['name']}..."))
 
-    device = dist_util.dev(conf.get('device'))
+    device = dist_util.dev(conf.get("device"))
     print("device:", device)
-    conf_y = conf.get('cond_y')
+    conf_y = conf.get("cond_y")
     print("cond_y:", conf_y)
-    callback_code.put(('msg', f"device: {device}..."))
+    callback_code.put(("msg", f"device: {device}..."))
 
-    print("loading model...")    
-    loss_fn_alex = lpips.LPIPS(net='alex') # best forward scores
-    callback_code.put(('msg', f"loading model..."))
+    print("loading model...")
+    loss_fn_alex = lpips.LPIPS(net="alex")  # best forward scores
+    callback_code.put(("msg", f"loading model..."))
     model, diffusion = create_model_and_diffusion(
         **select_args(conf, model_and_diffusion_defaults().keys()), conf=conf
     )
     print("loading state")
-    callback_code.put(('msg', f"loading state..."))
+    callback_code.put(("msg", f"loading state..."))
     model.load_state_dict(
-        dist_util.load_state_dict(os.path.expanduser(
-            conf.model_path), map_location="cpu")
+        dist_util.load_state_dict(
+            os.path.expanduser(conf.model_path), map_location="cpu"
+        )
     )
     model.to(device)
 
@@ -202,14 +237,16 @@ def sample_now(conf, callback_code):
 
     if conf.classifier_scale > 0 and conf.classifier_path:
         print("loading classifier...")
-        callback_code.put(('msg', f"loading classifier..."))
+        callback_code.put(("msg", f"loading classifier..."))
         classifier = create_classifier(
-            **select_args(conf, classifier_defaults().keys()))
+            **select_args(conf, classifier_defaults().keys())
+        )
         print(select_args(conf, classifier_defaults().keys()))
         print(conf.classifier_path)
         classifier.load_state_dict(
-            dist_util.load_state_dict(os.path.expanduser(
-                conf.classifier_path), map_location="cpu")
+            dist_util.load_state_dict(
+                os.path.expanduser(conf.classifier_path), map_location="cpu"
+            )
         )
 
         classifier.to(device)
@@ -225,6 +262,7 @@ def sample_now(conf, callback_code):
                 log_probs = F.log_softmax(logits, dim=-1)
                 selected = log_probs[range(len(logits)), y.view(-1)]
                 return th.autograd.grad(selected.sum(), x_in)[0] * conf.classifier_scale
+
     else:
         cond_fn = None
 
@@ -235,17 +273,17 @@ def sample_now(conf, callback_code):
     print("sampling...")
     all_images = []
 
-    dset = 'eval'
+    dset = "eval"
 
     eval_name = conf.get_default_eval_name()
 
     print("eval_name:", eval_name)
     print("loading dataloader...")
-    callback_code.put(('msg', f"loading dataloader..."))
+    callback_code.put(("msg", f"loading dataloader..."))
     dl = conf.get_dataloader(dset=dset, dsName=eval_name)
 
     counter = 0
-    count_max = conf['data']['eval'][eval_name]['max_len']
+    count_max = conf["data"]["eval"][eval_name]["max_len"]
     times = []
     for batch in iter(dl):
         counter += 1
@@ -255,20 +293,18 @@ def sample_now(conf, callback_code):
 
         model_kwargs = {}
 
-        model_kwargs["gt"] = batch['GT']
+        model_kwargs["gt"] = batch["GT"]
 
-
-
-        gt_keep_mask = batch.get('gt_keep_mask')
+        gt_keep_mask = batch.get("gt_keep_mask")
         if gt_keep_mask is not None:
-            model_kwargs['gt_keep_mask'] = gt_keep_mask
+            model_kwargs["gt_keep_mask"] = gt_keep_mask
 
         batch_size = model_kwargs["gt"].shape[0]
 
         # print('cond_y', conf.conf_y)
 
         # if 'cond_y' in conf:
-            # conf.cond_y = conf['cond_y']
+        # conf.cond_y = conf['cond_y']
         classes = th.ones(batch_size, dtype=th.long, device=device) * conf_y
         model_kwargs["y"] = classes
         print(model_kwargs["y"])
@@ -282,7 +318,8 @@ def sample_now(conf, callback_code):
         #     model_kwargs["y"] = classes
         try:
             import json
-            with open( 'inet_labels.json', 'r') as f:
+
+            with open("inet_labels.json", "r") as f:
                 class_names = json.load(f)
             print(classes)
             print("classes:", classes, class_names[str(classes[0].item())])
@@ -293,7 +330,7 @@ def sample_now(conf, callback_code):
             diffusion.p_sample_loop if not conf.use_ddim else diffusion.ddim_sample_loop
         )
 
-        callback_code.put(('msg', f"Start sampling... {counter}/{count_max}"))
+        callback_code.put(("msg", f"Start sampling... {counter}/{count_max}"))
         time_begin = perf_counter()
         result = sample_fn(
             model_fn,
@@ -305,55 +342,109 @@ def sample_now(conf, callback_code):
             progress=show_progress,
             return_all=True,
             conf=conf,
-            callback=callback_code
+            callback=callback_code,
         )
         time_end = perf_counter()
         times.append(time_end - time_begin)
-        srs = toU8(result['sample'])
-        gts = toU8(result['gt'])
-        lrs = toU8(result.get('gt') * model_kwargs.get('gt_keep_mask') + (-1) *
-                   th.ones_like(result.get('gt')) * (1 - model_kwargs.get('gt_keep_mask')))
+        srs = toU8(result["sample"])
+        gts = toU8(result["gt"])
+        lrs = toU8(
+            result.get("gt") * model_kwargs.get("gt_keep_mask")
+            + (-1)
+            * th.ones_like(result.get("gt"))
+            * (1 - model_kwargs.get("gt_keep_mask"))
+        )
 
-        gt_keep_masks = toU8((model_kwargs.get('gt_keep_mask') * 2 - 1))
+        gt_keep_masks = toU8((model_kwargs.get("gt_keep_mask") * 2 - 1))
 
         conf.eval_imswrite(
-            srs=srs, gts=gts, lrs=lrs, gt_keep_masks=gt_keep_masks,
-            img_names=batch['GT_name'], dset=dset, name=eval_name, verify_same=False)
-        
-    result_dir = str(Path(conf['log_dir']).parent) + '/results/'
+            srs=srs,
+            gts=gts,
+            lrs=lrs,
+            gt_keep_masks=gt_keep_masks,
+            img_names=batch["GT_name"],
+            dset=dset,
+            name=eval_name,
+            verify_same=False,
+        )
+
+    result_dir = str(Path(conf["log_dir"]).parent) + "/results/"
     os.makedirs(result_dir, exist_ok=True)
     # with open(result_dir + conf['name'] + '.times', 'w') as f:
     #     np.savetxt(f, times, fmt='%f')
 
     # lpips score
     losses = []
-    for img in os.listdir(conf['data']['eval'][eval_name]['gt_path'])[:count_max]:
-        file_img0 = os.path.join(conf['data']['eval'][eval_name]['paths']['gts'], img)
-        file_img1 = os.path.join(conf['data']['eval'][eval_name]['paths']['srs'], img)
-        img0 = cv2.imread(file_img0, cv2.IMREAD_UNCHANGED)
-        img1 = cv2.imread(file_img1, cv2.IMREAD_UNCHANGED)
+    ssims = []
+    mses = []
+    from skimage.metrics import structural_similarity as ssim
+    from skimage.metrics import mean_squared_error
+
+    for img in sorted(os.listdir(conf["data"]["eval"][eval_name]["gt_path"]))[:count_max]:
+        file_img0 = os.path.join(conf["data"]["eval"][eval_name]["paths"]["gts"], img)
+        file_img1 = os.path.join(conf["data"]["eval"][eval_name]["paths"]["srs"], img)
+        img0 = cv2.imread(file_img0, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
+        img1 = cv2.imread(file_img1, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
 
         print("LPIPS for", img)
 
-        img0 = th.from_numpy(img0).permute(2, 0, 1).unsqueeze(0).float() / 255
-        img1 = th.from_numpy(img1).permute(2, 0, 1).unsqueeze(0).float() / 255
+        if img0.shape[0] > 64:
+            # downsample to 64x64
+            img0 = cv2.resize(img0, (64, 64), interpolation=cv2.INTER_AREA)
+            cv2.imwrite(file_img0 + ".n.png", img0)
+            img1 = cv2.resize(img1, (64, 64), interpolation=cv2.INTER_AREA)
+            cv2.imwrite(file_img1 + ".dn.png", img1)
+            print("resizing to 64x64")
 
-        d = loss_fn_alex(img0, img1)
+        img0t = th.from_numpy(img0).permute(2, 0, 1).unsqueeze(0).float()
+        img1t = th.from_numpy(img1).permute(2, 0, 1).unsqueeze(0).float()
+
+
+
+        d = loss_fn_alex(img0t, img1t)
         losses.append(d.item())
 
-    results = pd.DataFrame({'loss': losses, 'time': times})
+        # ssim
+        print("SSIM for", img0.shape, img1.shape)
+        ssimdim1 = ssim(img0[:, :, 0], img1[:, :, 0], data_range=1.0)
+        ssimdim2 = ssim(img0[:, :, 1], img1[:, :, 1], data_range=1.0)
+        ssimdim3 = ssim(img0[:, :, 2], img1[:, :, 2], data_range=1.0)
+        ssims.append((ssimdim1 + ssimdim2 + ssimdim3) / 3.0)
+
+        mse = mean_squared_error(img0, img1)
+        mses.append(mse)
+
+        # ssim  = ssim(img0.squeeze().permute(1, 2, 0).numpy(), img1.squeeze().permute(1, 2, 0).numpy(), multichannel=True)
+        # ssims.append(ssim)
+
+        # mse = mean_squared_error(img0.squeeze().permute(1, 2, 0).numpy(), img1.squeeze().permute(1, 2, 0).numpy())
+        # mses.append(mse)
+
+
+
+
+    r_jump_length = [conf["schedule_jump_params"]["jump_length"]] * len(losses)
+    r_jump_n_sample = [conf["schedule_jump_params"]["jump_n_sample"]] * len(losses)
+    r_total_it = [conf["schedule_jump_params"]["t_T"]] * len(losses)
+    r_seed = [conf["seed"]] * len(losses)
+    r_model = [os.path.basename(conf["model_path"])] * len(losses)
+
+    results = pd.DataFrame({"lpips": losses, "ssim": ssims, "mse": mses,
+        "time": times, 
+        "model_name": r_model, "jump_length": r_jump_length, "jump_n_sample": r_jump_n_sample, "total_it": r_total_it, "seed": r_seed})
+    #"model_name":None, "jump_length":None, "jump_n_sample":None, "total_it":None; "seed": None})
     results = results.round(4)
-    results.to_csv(result_dir + conf['name'] + '.csv')
+    results.to_csv(result_dir + conf["name"] + ".csv")
 
     print("sampling complete")
-    callback_code.put(('msg', f"Sampling complete"))
+    callback_code.put(("msg", f"Sampling complete"))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--conf_path', type=str, required=False, default=None)
+    parser.add_argument("--conf_path", type=str, required=False, default=None)
     args = vars(parser.parse_args())
 
     conf_arg = conf_mgt.conf_base.Default_Conf()
-    conf_arg.update(yamlread(args.get('conf_path')))
+    conf_arg.update(yamlread(args.get("conf_path")))
     main(conf_arg)

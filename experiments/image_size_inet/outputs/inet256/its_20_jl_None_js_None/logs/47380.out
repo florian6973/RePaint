@@ -1,0 +1,41 @@
+Start test_inet256_genhalf
+device: cuda
+cond_y: 933
+loading model...
+Setting up [LPIPS] perceptual loss: trunk [alex], v[0.1], spatial [off]
+Loading model from: /workspace/.miniconda3/lib/python3.11/site-packages/lpips/weights/v0.1/alex.pth
+[0, 53, 105, 158, 210, 263, 315, 368, 421, 473, 526, 578, 631, 684, 736, 789, 841, 894, 946, 999]
+20
+loading state
+loading classifier...
+{'image_size': 256, 'classifier_use_fp16': False, 'classifier_width': 128, 'classifier_depth': 2, 'classifier_attention_resolutions': '32,16,8', 'classifier_use_scale_shift_norm': True, 'classifier_resblock_updown': True, 'classifier_pool': 'attention'}
+./data/pretrained/256x256_classifier.pt
+sampling...
+eval_name: lama_inet256_genhalf_n100_test
+loading dataloader...
+tensor([933], device='cuda:0')
+tensor([933], device='cuda:0')
+classes: tensor([933], device='cuda:0') cheeseburger
+
+tensor([933], device='cuda:0')
+tensor([933], device='cuda:0')
+classes: tensor([933], device='cuda:0') cheeseburger
+
+tensor([933], device='cuda:0')
+tensor([933], device='cuda:0')
+classes: tensor([933], device='cuda:0') cheeseburger
+
+tensor([933], device='cuda:0')
+tensor([933], device='cuda:0')
+classes: tensor([933], device='cuda:0') cheeseburger
+
+tensor([933], device='cuda:0')
+tensor([933], device='cuda:0')
+classes: tensor([933], device='cuda:0') cheeseburger
+
+LPIPS for 000002.png
+LPIPS for 000000.png
+LPIPS for 000004.png
+LPIPS for 000003.png
+LPIPS for 000001.png
+sampling complete

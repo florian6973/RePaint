@@ -1,0 +1,2 @@
+,lpips,time,model_name,jump_length,jump_n_sample,total_it,seed
+0,0.26,70.2723,256x256_diffusion.pt,6,2,250,0

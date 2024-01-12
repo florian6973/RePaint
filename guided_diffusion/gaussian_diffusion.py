@@ -399,17 +399,17 @@ class GaussianDiffusion:
 
                     weighed_gt = gt_part + noise_part
 
-                print("t:", t)
-                if x.item() == 18:
-                    x = (
-                        gt_keep_mask * (
-                            weighed_gt
-                        )
-                        +
-                        (1 - gt_keep_mask) * (
-                            x
-                        )
+                # print("t:", t)
+                # if t.item() == 18:
+                x = (
+                    gt_keep_mask * (
+                        weighed_gt
                     )
+                    +
+                    (1 - gt_keep_mask) * (
+                        x
+                    )
+                )
 
 
         out = self.p_mean_variance(
@@ -620,8 +620,10 @@ class GaussianDiffusion:
                         est_x_0=out['pred_xstart'], t=t_last_t+t_shift, debug=False)
                     pred_xstart = out["pred_xstart"]
 
-                if callback is not None:
+                if callback is not None and conf['callback']:
                     callback.put((idx_crop, image_after_step[0].permute(1, 2, 0).cpu().numpy()))
+                elif callback is not None:
+                    callback.put((idx_crop, ""))
 
                 idx_crop += 1
                 if conf.save_model and idx_crop in conf.save_idx:

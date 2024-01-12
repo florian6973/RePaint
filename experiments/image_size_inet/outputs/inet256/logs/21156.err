@@ -1,9 +1,0 @@
-Process Process-2:
-Traceback (most recent call last):
-  File "c:\Users\PolletStars\Anaconda3\envs\repaint\lib\multiprocessing\process.py", line 314, in _bootstrap
-    self.run()
-  File "c:\Users\PolletStars\Anaconda3\envs\repaint\lib\multiprocessing\process.py", line 108, in run
-    self._target(*self._args, **self._kwargs)
-  File "c:\Users\PolletStars\Documents\Git\RePaint\test.py", line 163, in sample_now
-    th.random.manual_seed(conf['seed'])
-KeyError: 'seed'
