@@ -111,7 +111,7 @@ cv2.imwrite("masked_img_encoded-2.png", masked_img_encoded[0].cpu().permute(1, 2
 
 # exit()
 
-prompt = ["small ants"]
+prompt = ["many small flowers"]
 
 height = 512                        # default height of Stable Diffusion
 width = 512                         # default width of Stable Diffusion
@@ -143,49 +143,30 @@ scheduler.set_timesteps(num_inference_steps)
 # latents = latents * scheduler.init_noise_sigma
 
 from tqdm.auto import tqdm
-from csch import get_schedule
 
-timesteps = get_schedule(num_inference_steps, scheduler)
-# print(timesteps)
-# exit()
-last_timestep = 1000
-for t in tqdm(timesteps):
-# for t in tqdm(scheduler.timesteps):
+for t in tqdm(scheduler.timesteps):
     noise = torch.randn_like(masked_img_encoded, device=torch_device)
-    if t < last_timestep:
-        noisy_target = scheduler.add_noise(masked_img_encoded, noise, t)
+    noisy_target = scheduler.add_noise(masked_img_encoded, noise, t)
 
-        # expand the latents if we are doing classifier-free guidance to avoid doing two forward passes.
-        latent_model_input = torch.cat([latents] * 2)
+    # expand the latents if we are doing classifier-free guidance to avoid doing two forward passes.
+    latent_model_input = torch.cat([latents] * 2)
 
-        latent_model_input = scheduler.scale_model_input(latent_model_input, timestep=t)
+    latent_model_input = scheduler.scale_model_input(latent_model_input, timestep=t)
 
-        # predict the noise residual
-        with torch.no_grad():
-            noise_pred = unet(latent_model_input, t, encoder_hidden_states=text_embeddings).sample
+    # predict the noise residual
+    with torch.no_grad():
+        noise_pred = unet(latent_model_input, t, encoder_hidden_states=text_embeddings).sample
 
-        # perform guidance
-        noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-        noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-        # noisy_target = noisy_target + guidance_scale * (noise_pred_text - noisy_target)
+    # perform guidance
+    noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
 
-        # compute the previous noisy sample x_t -> x_t-1
-        latents = scheduler.step(noise_pred, t, latents).prev_sample
-        # print(latents.shape)
-        #
-        # masked_img_encoded = masked_img_encoded * mask_img_encoded
-        latents = noisy_target * mask_img_encoded + latents * (1 - mask_img_encoded)
-    else:            # input = scheduler.add_noise(input, noise, t)
-        alpha_prod_t = scheduler.alphas_cumprod[t]
-        alpha_prod_t_prev = scheduler.alphas_cumprod[last_timestep] if last_timestep >= 0 else scheduler.one
-        current_alpha_t = alpha_prod_t / alpha_prod_t_prev
-        current_beta = 1 - current_alpha_t
-        # print(t//20, current_beta)
-
-        latents = (current_alpha_t ** 0.5) * latents + (1 - current_alpha_t) ** 0.5 * noise
-
-    last_timestep = t 
-
+    # compute the previous noisy sample x_t -> x_t-1
+    latents = scheduler.step(noise_pred, t, latents).prev_sample
+    # print(latents.shape)
+    #
+    # masked_img_encoded = masked_img_encoded * mask_img_encoded
+    latents = noisy_target * mask_img_encoded + latents * (1 - mask_img_encoded)     
 
 
 latents = 1 / 0.18215 * latents
