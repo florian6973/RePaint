@@ -5,8 +5,11 @@ import numpy as np
 import torchvision.io as io
 
 mask = (torch.ones((3, 512, 512)) * 255).type(torch.uint8)
-mask[:, 128:256, 128:256] = 0
+# mask[:, 128:256, 128:256] = 0
+# mask[: :, 256:] = 0
+mask[: , 256:, 256:] = 0
 io.write_png(mask, "mask.png")
+# exit()
 
 import cv2
 import numpy as np
@@ -62,7 +65,11 @@ from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import AutoencoderKL, UNet2DConditionModel, PNDMScheduler
 
 # 1. Load the autoencoder model which will be used to decode the latents into image space. 
-vae = AutoencoderKL.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="vae")
+
+model = "runwayml/stable-diffusion-inpainting"
+model = "runwayml/stable-diffusion-v1-5"
+# model = "CompVis/stable-diffusion-v1-4"
+vae = AutoencoderKL.from_pretrained(model, subfolder="vae")
 
 
 # 2. Load the tokenizer and text encoder to tokenize and encode the text. 
@@ -70,7 +77,7 @@ tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14")
 text_encoder = CLIPTextModel.from_pretrained("openai/clip-vit-large-patch14")
 
 # 3. The UNet model for generating the latents.
-unet = UNet2DConditionModel.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="unet")
+unet = UNet2DConditionModel.from_pretrained(model, subfolder="unet")
 
 # from diffusers import LMSDiscreteScheduler
 
@@ -96,10 +103,12 @@ print(mask_img_full_encoded.shape)
 print(mask_img_encoded.shape)
 
 mask_img_encoded = torch.ones_like(mask_img_full_encoded)
-mask_img_encoded[:, :, 16:32, 16:32] = 0
+# mask_img_encoded[:, :, 16:32, 16:32] = 0
+mask_img_encoded[:, :, 32:, 32:] = 0
 
 print(mask_img_encoded)
 
+cv2.imwrite("masked_img_encoded-full.png", masked_img_encoded[0].cpu().permute(1, 2, 0).numpy() * 255)
 masked_img_encoded = masked_img_encoded * mask_img_encoded
 
 cv2.imwrite("masked_img_encoded.png", mask_img_full_encoded[0].cpu().permute(1, 2, 0).numpy() * 255)
@@ -111,16 +120,25 @@ cv2.imwrite("masked_img_encoded-2.png", masked_img_encoded[0].cpu().permute(1, 2
 
 # exit()
 
-prompt = ["small ants"]
+# prompt = ["burger with ant in it"]
+# prompt = ["burger half eaten"]
+# prompt= ["ants"]
+# prompt= ["ants"]
+
+prompt = ['bite in burger']
+
+
+# prompt = ["best burger ever"]
+# prompt = ["big eggs"]
 
 height = 512                        # default height of Stable Diffusion
 width = 512                         # default width of Stable Diffusion
 
-num_inference_steps = 100           # Number of denoising steps
+num_inference_steps = 25#25#100           # Number of denoising steps
 
 guidance_scale = 7.5                # Scale for classifier-free guidance
 
-generator = torch.manual_seed(0)    # Seed generator to create the inital latent noise
+generator = torch.manual_seed(10)    # Seed generator to create the inital latent noise
 
 batch_size = len(prompt)
 
@@ -148,12 +166,13 @@ from csch import get_schedule
 timesteps = get_schedule(num_inference_steps, scheduler)
 # print(timesteps)
 # exit()
-last_timestep = 1000
+last_timestep = torch.tensor(999).to(torch_device)
 for t in tqdm(timesteps):
 # for t in tqdm(scheduler.timesteps):
     noise = torch.randn_like(masked_img_encoded, device=torch_device)
     if t < last_timestep:
         noisy_target = scheduler.add_noise(masked_img_encoded, noise, t)
+        # latents = noisy_target * mask_img_encoded + latents * (1 - mask_img_encoded)
 
         # expand the latents if we are doing classifier-free guidance to avoid doing two forward passes.
         latent_model_input = torch.cat([latents] * 2)
@@ -166,6 +185,10 @@ for t in tqdm(timesteps):
 
         # perform guidance
         noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+
+        # noisy_target_2 = scheduler.add_noise(masked_img_encoded, noise, last_timestep)
+        # noise_pred_uncond = noisy_target_2 * mask_img_encoded + noise_pred_uncond * (1 - mask_img_encoded)
+
         noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
         # noisy_target = noisy_target + guidance_scale * (noise_pred_text - noisy_target)
 
@@ -174,7 +197,9 @@ for t in tqdm(timesteps):
         # print(latents.shape)
         #
         # masked_img_encoded = masked_img_encoded * mask_img_encoded
+
         latents = noisy_target * mask_img_encoded + latents * (1 - mask_img_encoded)
+
     else:            # input = scheduler.add_noise(input, noise, t)
         alpha_prod_t = scheduler.alphas_cumprod[t]
         alpha_prod_t_prev = scheduler.alphas_cumprod[last_timestep] if last_timestep >= 0 else scheduler.one

@@ -84,7 +84,9 @@ def get_schedule_jump(t_T, n_sample, jump_length, jump_n_sample,
     return ts
 
 def get_schedule(num_steps, scheduler):
-    ts = get_schedule_jump(num_steps, 1, 1, 1, 1, 1, 1, 1, 100000000)[:-1]
+    # ts = get_schedule_jump(num_steps, 1, 1, 1, 1, 1, 1, 1, 100000000)[:-1]
+
+    ts = get_schedule_jump(num_steps, 1, 10, 10, 1, 1, 1, 1, 100000000)[:-1]
     ts = (np.array(ts)*scheduler.config.num_train_timesteps/num_steps).astype(int)
     print(ts)
     np.savetxt("ts.txt", scheduler.alphas_cumprod, fmt="%f")
