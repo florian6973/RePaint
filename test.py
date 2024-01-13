@@ -72,7 +72,8 @@ import numpy as np
 
 
 def build_conf(
-    exp, conf_name, total_it=20, n=1, jump_length=None, jump_n_sample=None, seed=0, parallel=True
+    exp, conf_name, total_it=20, n=1, jump_length=None, jump_n_sample=None, seed=0, parallel=True,
+    save_model=None, reload=False
 ):
     conf_path = f"experiments/{exp}/confs/{conf_name}.yml"
     conf_arg = conf_mgt.conf_base.Default_Conf()
@@ -115,10 +116,17 @@ def build_conf(
 
     conf_arg["seed"] = seed
 
-    conf_arg["reload"] = False
+    conf_arg["reload"] = reload
     # conf_arg['save_model'] = f'experiments/{exp}/outputs/{conf_name}/model.pkl'
     # conf_arg['save_idx'] = [14]
     # conf_arg['stop_it'] = [14]
+
+    if save_model is not None:
+        if 'model_path' not in save_model:
+            save_model['model_path'] = conf_arg["log_dir"] + 'save_jn.pkl'
+        conf_arg['save_model'] = save_model["model_path"] #conf_arg["log_dir"] + 'save_jn.pkl'
+        conf_arg['save_idx'] = save_model["save_idx"]
+        conf_arg['stop_it'] = save_model["stop_it"]
 
     return conf_arg
 
