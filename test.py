@@ -218,6 +218,7 @@ def sample_now(conf, callback_code):
 
     print("loading model...")
     loss_fn_alex = lpips.LPIPS(net="alex")  # best forward scores
+    loss_fn_vgg = lpips.LPIPS(net="vgg")  # best forward scores
     callback_code.put(("msg", f"loading model..."))
     model, diffusion = create_model_and_diffusion(
         **select_args(conf, model_and_diffusion_defaults().keys()), conf=conf
@@ -377,6 +378,7 @@ def sample_now(conf, callback_code):
 
     # lpips score
     losses = []
+    losses_vgg = []
     ssims = []
     mses = []
     from skimage.metrics import structural_similarity as ssim
@@ -405,6 +407,8 @@ def sample_now(conf, callback_code):
 
         d = loss_fn_alex(img0t, img1t)
         losses.append(d.item())
+        d2 = loss_fn_vgg(img0t, img1t)
+        losses_vgg.append(d2.item())
 
         # ssim
         print("SSIM for", img0.shape, img1.shape)
@@ -431,7 +435,8 @@ def sample_now(conf, callback_code):
     r_seed = [conf["seed"]] * len(losses)
     r_model = [os.path.basename(conf["model_path"])] * len(losses)
 
-    results = pd.DataFrame({"lpips": losses, "ssim": ssims, "mse": mses,
+    results = pd.DataFrame({"lpips_alex": losses, "ssim": ssims, "mse": mses,
+        "lpips_vgg": losses_vgg,
         "time": times, 
         "model_name": r_model, "jump_length": r_jump_length, "jump_n_sample": r_jump_n_sample, "total_it": r_total_it, "seed": r_seed})
     #"model_name":None, "jump_length":None, "jump_n_sample":None, "total_it":None; "seed": None})
