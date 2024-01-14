@@ -73,7 +73,7 @@ import numpy as np
 
 def build_conf(
     exp, conf_name, total_it=20, n=1, jump_length=None, jump_n_sample=None, seed=0, parallel=True,
-    save_model=None, reload=False
+    save_model=None, reload=False, cond_y=933 # hamburger
 ):
     conf_path = f"experiments/{exp}/confs/{conf_name}.yml"
     conf_arg = conf_mgt.conf_base.Default_Conf()
@@ -81,13 +81,10 @@ def build_conf(
 
     conf_arg['callback'] = parallel
 
-    conf_arg["cond_y"] = 933  # 78 # 933
+    conf_arg["cond_y"] = cond_y
     output_folder = f"experiments/{exp}/outputs/{conf_name}/its_{total_it}_jl_{jump_length}_js_{jump_n_sample}"
 
     eval_name = conf_arg.get_default_eval_name()
-    # name
-    # seed
-    # gt path
     conf_arg["data"]["eval"][eval_name][
         "gt_path"
     ] = f"experiments/{exp}/gts/{conf_name}/img"
@@ -101,9 +98,7 @@ def build_conf(
         "gt_keep_masks"
     ] = f"{output_folder}/gt_keep_mask"
     conf_arg["log_dir"] = f"{output_folder}/logs/"
-    # mask path
-    # max_len
-    # paths: srs, lrs, gts, gt_keep_masks
+
     conf_arg["data"]["eval"][eval_name]["max_len"] = n
     conf_arg["timestep_respacing"] = str(total_it)
     conf_arg["schedule_jump_params"]["t_T"] = total_it
@@ -111,20 +106,15 @@ def build_conf(
         conf_arg["schedule_jump_params"]["jump_length"] = jump_length
     if jump_n_sample is not None:
         conf_arg["schedule_jump_params"]["jump_n_sample"] = jump_n_sample
-    # conf_arg['schedule_jump_params']['jump_length'] = 5
-    # conf_arg['schedule_jump_params']['jump_n_sample'] = 3
 
     conf_arg["seed"] = seed
 
     conf_arg["reload"] = reload
-    # conf_arg['save_model'] = f'experiments/{exp}/outputs/{conf_name}/model.pkl'
-    # conf_arg['save_idx'] = [14]
-    # conf_arg['stop_it'] = [14]
 
     if save_model is not None:
         if 'model_path' not in save_model:
             save_model['model_path'] = conf_arg["log_dir"] + 'save_jn.pkl'
-        conf_arg['save_model'] = save_model["model_path"] #conf_arg["log_dir"] + 'save_jn.pkl'
+        conf_arg['save_model'] = save_model["model_path"]
         conf_arg['save_idx'] = save_model["save_idx"]
         conf_arg['stop_it'] = save_model["stop_it"]
 
@@ -381,8 +371,6 @@ def sample_now(conf, callback_code):
 
     result_dir = str(Path(conf["log_dir"]).parent) + "/results/"
     os.makedirs(result_dir, exist_ok=True)
-    # with open(result_dir + conf['name'] + '.times', 'w') as f:
-    #     np.savetxt(f, times, fmt='%f')
 
     # lpips score
     losses = []
@@ -400,18 +388,16 @@ def sample_now(conf, callback_code):
 
         print("LPIPS for", img)
 
-        if img0.shape[0] > 64:
-            # downsample to 64x64
-            img0 = cv2.resize(img0 * 255, (64, 64), interpolation=cv2.INTER_AREA)
-            cv2.imwrite(file_img0 + ".n.png", img0)
-            img1 = cv2.resize(img1 * 255, (64, 64), interpolation=cv2.INTER_AREA)
-            cv2.imwrite(file_img1 + ".dn.png", img1)
-            print("resizing to 64x64")
+        # if img0.shape[0] > 64:
+        #     # downsample to 64x64
+        #     img0 = cv2.resize(img0 * 255, (64, 64), interpolation=cv2.INTER_AREA)
+        #     cv2.imwrite(file_img0 + ".n.png", img0)
+        #     img1 = cv2.resize(img1 * 255, (64, 64), interpolation=cv2.INTER_AREA)
+        #     cv2.imwrite(file_img1 + ".dn.png", img1)
+        #     print("resizing to 64x64")
 
         img0t = th.from_numpy(img0).permute(2, 0, 1).unsqueeze(0).float()
         img1t = th.from_numpy(img1).permute(2, 0, 1).unsqueeze(0).float()
-
-
 
         d = loss_fn_alex(img0t, img1t)
         losses.append(d.item())
@@ -428,15 +414,6 @@ def sample_now(conf, callback_code):
         mse = mean_squared_error(img0, img1)
         mses.append(mse)
 
-        # ssim  = ssim(img0.squeeze().permute(1, 2, 0).numpy(), img1.squeeze().permute(1, 2, 0).numpy(), multichannel=True)
-        # ssims.append(ssim)
-
-        # mse = mean_squared_error(img0.squeeze().permute(1, 2, 0).numpy(), img1.squeeze().permute(1, 2, 0).numpy())
-        # mses.append(mse)
-
-
-
-
     r_jump_length = [conf["schedule_jump_params"]["jump_length"]] * len(losses)
     r_jump_n_sample = [conf["schedule_jump_params"]["jump_n_sample"]] * len(losses)
     r_total_it = [conf["schedule_jump_params"]["t_T"]] * len(losses)
@@ -447,7 +424,7 @@ def sample_now(conf, callback_code):
         "lpips_vgg": losses_vgg,
         "time": times, 
         "model_name": r_model, "jump_length": r_jump_length, "jump_n_sample": r_jump_n_sample, "total_it": r_total_it, "seed": r_seed})
-    #"model_name":None, "jump_length":None, "jump_n_sample":None, "total_it":None; "seed": None})
+
     results = results.round(4)
     results.to_csv(result_dir + conf["name"] + ".csv")
 

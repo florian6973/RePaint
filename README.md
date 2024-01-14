@@ -8,7 +8,7 @@ Please install the main dependencies first, as detailed in the original readme b
 
 Then, install the following:
 ```bash
-pip install diffusers[torch] matplotlib ipympl lpips
+pip install diffusers[torch] matplotlib ipympl lpips opencv-python pandas
 ```
 
 Link for 64x64 models: https://openaipublic.blob.core.windows.net/diffusion/jul-2021/64x64_diffusion.pt and https://openaipublic.blob.core.windows.net/diffusion/jul-2021/64x64_classifier.pt. They have to be put in `data/pretrained`.
@@ -16,6 +16,10 @@ Link for 64x64 models: https://openaipublic.blob.core.windows.net/diffusion/jul-
 Note: to setup this environment on OVH Cloud, I used the Pytorch distribution and I had to revert to an older version of matplotlib to make the Jupyter Notebook Interactive Widgets work (3.7.0).
 
 ## RePaint experiments
+
+The original `test.py` has been modified and it has to be used through a notebook now. 
+
+Class labels for ImageNet are referenced  in `inet_labels.json`.
 
 Please see the notebook `demo.ipynb` for a quick demo and `experiments.ipynb` for the main experiments.
 

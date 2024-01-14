@@ -1,2 +1,2 @@
-,lpips,ssim,mse,time,model_name,jump_length,jump_n_sample,total_it,seed
-0,0.1697,0.2915,0.1264,3.7841,256x256_diffusion.pt,1,1,10,0
+,lpips_alex,ssim,mse,lpips_vgg,time,model_name,jump_length,jump_n_sample,total_it,seed
+0,0.0949,0.2422,8221.5131,0.1368,4.5415,256x256_diffusion.pt,1,1,10,0
