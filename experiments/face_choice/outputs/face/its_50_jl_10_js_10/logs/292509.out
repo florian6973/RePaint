@@ -1,0 +1,20 @@
+Start face_example
+device: cuda
+cond_y: 933
+loading model...
+Setting up [LPIPS] perceptual loss: trunk [alex], v[0.1], spatial [off]
+Loading model from: /workspace/.miniconda3/lib/python3.11/site-packages/lpips/weights/v0.1/alex.pth
+Setting up [LPIPS] perceptual loss: trunk [vgg], v[0.1], spatial [off]
+Loading model from: /workspace/.miniconda3/lib/python3.11/site-packages/lpips/weights/v0.1/vgg.pth
+Betas step 1000
+[0, 20, 41, 61, 82, 102, 122, 143, 163, 183, 204, 224, 245, 265, 285, 306, 326, 347, 367, 387, 408, 428, 449, 469, 489, 510, 530, 550, 571, 591, 612, 632, 652, 673, 693, 714, 734, 754, 775, 795, 816, 836, 856, 877, 897, 917, 938, 958, 979, 999]
+50
+Timestep number: 1000
+Timestep number: 50
+loading state
+sampling...
+eval_name: paper_face_mask
+loading dataloader...
+tensor([933], device='cuda:0')
+tensor([933], device='cuda:0')
+classes: tensor([933], device='cuda:0') cheeseburger

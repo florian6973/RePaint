@@ -6,7 +6,7 @@ import numpy as np
 params = {
     "n": 2,
     "seed": 1,
-    "total_it": 13,
+    "total_it": 19,
     "jump_length": 1,
     "jump_n_sample": 1,
     "parallel": False,
@@ -15,7 +15,8 @@ params = {
 processes = []
 for total_it in [15, 16]:
     params["total_it"] = total_it
-    conf = build_conf("image_size_inet", "inet64", **params)
+    # conf = build_conf("image_size_inet", "inet64", **params)
+    conf = build_conf("image_size_inet", "inet256", **params)
     processes.append((conf, *main(conf)))
     print("Started process", processes[-1][1].pid)
     

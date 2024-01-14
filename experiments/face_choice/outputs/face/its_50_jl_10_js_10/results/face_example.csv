@@ -1,0 +1,2 @@
+,lpips_alex,ssim,mse,lpips_vgg,time,model_name,jump_length,jump_n_sample,total_it,seed
+0,0.0747,0.7863,675.557,0.0599,61.5534,celeba256_250000.pt,10,10,50,0
