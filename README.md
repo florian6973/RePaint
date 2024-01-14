@@ -2,17 +2,28 @@
 
 **Forked repository for the MVA class Digital Imaging**
 
+## Additional dependencies
 
+Please install the main dependencies first, as detailed in the original readme below.
 
-pip retrograd matplotlib version
-ipympl from conda
+Then, install the following:
+```bash
+pip install diffusers[torch] matplotlib ipympl lpips
+```
+
+Link for 64x64 models: https://openaipublic.blob.core.windows.net/diffusion/jul-2021/64x64_diffusion.pt and https://openaipublic.blob.core.windows.net/diffusion/jul-2021/64x64_classifier.pt. They have to be put in `data/pretrained`.
+
+Note: to setup this environment on OVH Cloud, I used the Pytorch distribution and I had to revert to an older version of matplotlib to make the Jupyter Notebook Interactive Widgets work (3.7.0).
+
+## RePaint experiments
+
+Please see the notebook `demo.ipynb` for a quick demo and `experiments.ipynb` for the main experiments.
 
 ## RePaint for HuggingFace Diffusers
 
 Please see the subfolder `diffusers`.
 
 After installing the necessary packages, you can run `repaint_ddpm.py` or `repaint_sd.py` for inpainting with DDPM or Stable Diffusion.
-
 
 ## Original Readme
 
