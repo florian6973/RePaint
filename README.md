@@ -1,12 +1,24 @@
 # RePaint
-**Inpainting using Denoising Diffusion Probabilistic Models**
+
+**Forked repository for the MVA class Digital Imaging**
 
 
-CVPR 2022 [[Paper]](https://bit.ly/3b1ABEb)
+
+pip retrograd matplotlib version
+ipympl from conda
+
+## RePaint for HuggingFace Diffusers
+
+Please see the subfolder `diffusers`.
+
+After installing the necessary packages, you can run `repaint_ddpm.py` or `repaint_sd.py` for inpainting with DDPM or Stable Diffusion.
+
+
+## Original Readme
 
 [![Denoising_Diffusion_Inpainting_Animation](https://user-images.githubusercontent.com/11280511/150849757-5cd762cb-07a3-46aa-a906-0fe4606eba3b.gif)](#)
 
-## Setup
+CVPR 2022 [[Paper]](https://bit.ly/3b1ABEb)
 
 ### 1. Code
 
@@ -203,6 +215,3 @@ Details are in Algorithm 1 on Page 5. [[Paper]](https://bit.ly/3b1ABEb)
 This work was supported by the ETH Zürich Fund (OK), a Huawei Technologies Oy (Finland) project, and an Nvidia GPU grant.
 
 This repository is based on [guided-diffuion](https://github.com/openai/guided-diffusion.git) from OpenAI.
-
-pip retrograd matplotlib version
-ipympl from conda
